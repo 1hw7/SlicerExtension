@@ -255,7 +255,6 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
   def test_HannahWilkinson1(self):
 
       # Create coordinate system models to visualize the transforms
-    createModelsLogic = slicer.modules.createmodels.logic()
 
     RasCoordinateModel = createModelsLogic.CreateCoordinate(20, 2)
     RasCoordinateModel.SetName('PreModel')
@@ -264,3 +263,53 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
     ReferenceCoordinateModel = createModelsLogic.CreateCoordinate(20, 2)
     ReferenceCoordinateModel.SetName('PostModel')
     ReferenceCoordinateModel.GetDisplayNode().SetColor(0, 0, 1)
+
+      import numpy
+
+      fromNormCoordinates = numpy.random.rand(N, 3)  # An array of random numbers
+      noise = numpy.random.normal(0.0, Sigma, N * 3)
+
+      # Create the two fiducial lists
+
+      alphaFids = slicer.vtkMRMLMarkupsFiducialNode()
+      alphaFids.SetName('Alpha')
+      slicer.mrmlScene.AddNode(alphaFids)
+
+      betaFids = slicer.vtkMRMLMarkupsFiducialNode()
+      betaFids.SetName('Beta')
+      slicer.mrmlScene.AddNode(betaFids)
+      betaFids.GetDisplayNode().SetSelectedColor(1, 1, 0)
+
+      # vtkPoints type is needed for registration
+
+      alphaPoints = vtk.vtkPoints()
+      betaPoints = vtk.vtkPoints()
+
+      for i in range(N):
+        x = (fromNormCoordinates[i, 0] - 0.5) * Scale
+        y = (fromNormCoordinates[i, 1] - 0.5) * Scale
+        z = (fromNormCoordinates[i, 2] - 0.5) * Scale
+        alphaFids.AddFiducial(x, y, z)
+        alphaPoints.InsertNextPoint(x, y, z)
+        xx = x + noise[i * 3]
+        yy = y + noise[i * 3 + 1]
+        zz = z + noise[i * 3 + 2]
+        betaFids.AddFiducial(xx, yy, zz)
+        betaPoints.InsertNextPoint(xx, yy, zz)
+
+      # Create landmark transform object that computes registration
+
+      landmarkTransform = vtk.vtkLandmarkTransform()
+      landmarkTransform.SetSourceLandmarks(alphaPoints)
+      landmarkTransform.SetTargetLandmarks(betaPoints)
+      landmarkTransform.SetModeToRigidBody()
+      landmarkTransform.Update()
+
+      m = vtk.vtkMatrix4x4()
+      landmarkTransform.GetMatrix(m)
+
+      det = m.Determinant()
+      if det < 1e-8:
+        print 'Unstable registration. Check input for collinear points.'
+
+      alphaToBeta.SetMatrixTransformToParent(m)
