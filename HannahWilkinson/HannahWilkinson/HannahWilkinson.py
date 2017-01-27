@@ -253,37 +253,14 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
     self.test_HannahWilkinson1()
 
   def test_HannahWilkinson1(self):
-    import numpy
-    N = 10
-    Scale = 100
-    Sigma=2.0
-    fromNormCoordinates = numpy.random.rand(N, 3)  # An array of random numbers
-    noise = numpy.random.normal(0.0, Sigma, N * 3)
 
-    # Create the two fiducial lists
+      # Create coordinate system models to visualize the transforms
+    createModelsLogic = slicer.modules.createmodels.logic()
 
-    alphaFids = slicer.vtkMRMLMarkupsFiducialNode()
-    alphaFids.SetName('Alpha')
-    slicer.mrmlScene.AddNode(alphaFids)
+    RasCoordinateModel = createModelsLogic.CreateCoordinate(20, 2)
+    RasCoordinateModel.SetName('PreModel')
+    RasCoordinateModel.GetDisplayNode().SetColor(1, 0, 0)
 
-    betaFids = slicer.vtkMRMLMarkupsFiducialNode()
-    betaFids.SetName('Beta')
-    slicer.mrmlScene.AddNode(betaFids)
-    betaFids.GetDisplayNode().SetSelectedColor(1, 1, 0)
-
-    # vtkPoints type is needed for registration
-
-    alphaPoints = vtk.vtkPoints()
-    betaPoints = vtk.vtkPoints()
-
-    for i in range(N):
-      x = (fromNormCoordinates[i, 0] - 0.5) * Scale
-      y = (fromNormCoordinates[i, 1] - 0.5) * Scale
-      z = (fromNormCoordinates[i, 2] - 0.5) * Scale
-      alphaFids.AddFiducial(x, y, z)
-      alphaPoints.InsertNextPoint(x, y, z)
-      xx = x + noise[i * 3]
-      yy = y + noise[i * 3 + 1]
-      zz = z + noise[i * 3 + 2]
-      betaFids.AddFiducial(xx, yy, zz)
-      betaPoints.InsertNextPoint(xx, yy, zz)
+    ReferenceCoordinateModel = createModelsLogic.CreateCoordinate(20, 2)
+    ReferenceCoordinateModel.SetName('PostModel')
+    ReferenceCoordinateModel.GetDisplayNode().SetColor(0, 0, 1)
