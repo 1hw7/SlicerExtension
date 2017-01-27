@@ -314,3 +314,4 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
       print 'Unstable registration. Check input for collinear points.'
 
     alphaToBeta.SetMatrixTransformToParent(m)
+    print('h')
