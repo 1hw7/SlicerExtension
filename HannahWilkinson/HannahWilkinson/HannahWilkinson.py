@@ -254,25 +254,28 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
 
   def test_HannahWilkinson1(self):
 
-      # Create coordinate system models to visualize the transforms
+    # Create transform node for registration result (optional)
 
-    RasCoordinateModel = createModelsLogic.CreateCoordinate(20, 2)
-    RasCoordinateModel.SetName('PreModel')
-    RasCoordinateModel.GetDisplayNode().SetColor(1, 0, 0)
+    referenceToRas = slicer.vtkMRMLLinearTransformNode()
+    referenceToRas.SetName('referenceToRas')
+    slicer.mrmlScene.AddNode(referenceToRas)
 
-    ReferenceCoordinateModel = createModelsLogic.CreateCoordinate(20, 2)
-    ReferenceCoordinateModel.SetName('PostModel')
-    ReferenceCoordinateModel.GetDisplayNode().SetColor(0, 0, 1)
+    # Experiment parameters (start from here if you have alphaToBeta already)
+
+    N = 10  # Number of fiducials
+    Scale = 100.0  # Size of space where fiducial are placed
+    Sigma = 2.0  # Radius of random error
+
+    # Create first fiducial list
 
     import numpy
 
     fromNormCoordinates = numpy.random.rand(N, 3)  # An array of random numbers
     noise = numpy.random.normal(0.0, Sigma, N * 3)
 
-      # Create the two fiducial lists
+    # Create the two fiducial lists
 
     alphaFids = slicer.vtkMRMLMarkupsFiducialNode()
-
     alphaFids.SetName('Alpha')
     slicer.mrmlScene.AddNode(alphaFids)
 
@@ -281,36 +284,68 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
     slicer.mrmlScene.AddNode(betaFids)
     betaFids.GetDisplayNode().SetSelectedColor(1, 1, 0)
 
-      # vtkPoints type is needed for registration
+    # vtkPoints type is needed for registration
 
-    rasPoints = vtk.vtkPoints()
-    referencePoints = vtk.vtkPoints()
+    RasPoints = vtk.vtkPoints()
+    ReferencePoints = vtk.vtkPoints()
 
     for i in range(N):
       x = (fromNormCoordinates[i, 0] - 0.5) * Scale
       y = (fromNormCoordinates[i, 1] - 0.5) * Scale
       z = (fromNormCoordinates[i, 2] - 0.5) * Scale
-      alphaFids.AddFiducial(x, y, z)
-      rasPoints.InsertNextPoint(x, y, z)
+      numFids = alphaFids.AddFiducial(x, y, z)
+      numPoints = RasPoints.InsertNextPoint(x, y, z)
       xx = x + noise[i * 3]
       yy = y + noise[i * 3 + 1]
       zz = z + noise[i * 3 + 2]
-      betaFids.AddFiducial(xx, yy, zz)
-      referencePoints.InsertNextPoint(xx, yy, zz)
+      numFids = betaFids.AddFiducial(xx, yy, zz)
+      numPoints = ReferencePoints.InsertNextPoint(xx, yy, zz)
 
-      # Create landmark transform object that computes registration
+    # Create landmark transform object that computes registration
 
     landmarkTransform = vtk.vtkLandmarkTransform()
-    landmarkTransform.SetSourceLandmarks(alphaPoints)
-    landmarkTransform.SetTargetLandmarks(betaPoints)
+    landmarkTransform.SetSourceLandmarks(RasPoints)
+    landmarkTransform.SetTargetLandmarks(ReferencePoints)
     landmarkTransform.SetModeToRigidBody()
     landmarkTransform.Update()
 
-    m = vtk.vtkMatrix4x4()
-    landmarkTransform.GetMatrix(m)
+    referenceToRasMatrix = vtk.vtkMatrix4x4()
+    landmarkTransform.GetMatrix(referenceToRasMatrix)
 
-    det = m.Determinant()
+    det = referenceToRasMatrix.Determinant()
     if det < 1e-8:
       print 'Unstable registration. Check input for collinear points.'
 
-    alphaToBeta.SetMatrixTransformToParent(m)
+    referenceToRas.SetMatrixTransformToParent(referenceToRasMatrix)
+
+    # Compute average point distance after registration
+
+    average = 0.0
+    numbersSoFar = 0
+
+    for i in range(N):
+      numbersSoFar = numbersSoFar + 1
+      a = RasPoints.GetPoint(i)
+      pointA_Alpha = numpy.array(a)
+      pointA_Alpha = numpy.append(pointA_Alpha, 1)
+      pointA_Beta = referenceToRasMatrix.MultiplyFloatPoint(pointA_Alpha)
+      b = ReferencePoints.GetPoint(i)
+      pointB_Beta = numpy.array(b)
+      pointB_Beta = numpy.append(pointB_Beta, 1)
+      distance = numpy.linalg.norm(pointA_Beta - pointB_Beta)
+      average = average + (distance - average) / numbersSoFar
+
+    print "Average distance after registration: " + str(average)
+
+    #createModelsLogic = slicer.modules.createmodels.logic()
+    #referenceModelNode = createModelsLogic.CreateCoordinate(20, 2)
+    #referenceModelNode.SetName('referenceCoordinateModel')
+    #postModelNode = createModelsLogic.CreateCoordinate(20, 2)
+    #postModelNode.SetName('RasCoordinateModel')
+
+    #referenceModelNode.GetDisplayNode().SetColor(1, 0, 0)
+    #postModelNode.GetDisplayNode().SetColor(0, 1, 0)
+
+    #postModelNode.SetAndObserveTransformNodeID(alphaToBeta.GetID())
+
+    #targetToPoint=numpy.array[0,0,0,1]
