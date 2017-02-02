@@ -337,15 +337,19 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
 
     print "Average distance after registration: " + str(average)
 
-    #createModelsLogic = slicer.modules.createmodels.logic()
-    #referenceModelNode = createModelsLogic.CreateCoordinate(20, 2)
-    #referenceModelNode.SetName('referenceCoordinateModel')
-    #postModelNode = createModelsLogic.CreateCoordinate(20, 2)
-    #postModelNode.SetName('RasCoordinateModel')
+    createModelsLogic = slicer.modules.createmodels.logic()
+    referenceModelNode = createModelsLogic.CreateCoordinate(20, 2)
+    referenceModelNode.SetName('referenceCoordinateModel')
+    postModelNode = createModelsLogic.CreateCoordinate(20, 2)
+    postModelNode.SetName('RasCoordinateModel')
 
-    #referenceModelNode.GetDisplayNode().SetColor(1, 0, 0)
-    #postModelNode.GetDisplayNode().SetColor(0, 1, 0)
+    referenceModelNode.GetDisplayNode().SetColor(1, 0, 0)
+    postModelNode.GetDisplayNode().SetColor(0, 1, 0)
 
-    #postModelNode.SetAndObserveTransformNodeID(alphaToBeta.GetID())
+    postModelNode.SetAndObserveTransformNodeID(referenceToRas.GetID())
 
-    #targetToPoint=numpy.array[0,0,0,1]
+    targetPoint_Reference = numpy.array([0, 0, 0, 1])
+    targetPoint_Ras = referenceToRasMatrix.MultiplyFloatPoint(targetPoint_Reference)
+    distance = numpy.linalg.norm(targetPoint_Reference - targetPoint_Ras)
+    print 'Target Registration Error' + str(distance)
+
