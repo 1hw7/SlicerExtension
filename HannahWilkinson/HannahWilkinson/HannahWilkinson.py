@@ -235,40 +235,11 @@ class HannahWilkinsonLogic(ScriptedLoadableModuleLogic):
 
 
 class HannahWilkinsonTest(ScriptedLoadableModuleTest):
-  """
-  This is the test case for your scripted module.
-  Uses ScriptedLoadableModuleTest base class, available at:
-  https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
-  """
-
-  def setUp(self):
-    """ Do whatever is needed to reset the state - typically a scene clear will be enough.
-    """
-    slicer.mrmlScene.Clear(0)
-
-  def runTest(self):
-    """Run as few or as many tests as needed here.
-    """
-    self.setUp()
-    self.test_HannahWilkinson1()
-
-  def test_HannahWilkinson1(self):
-
-    # Create transform node for registration result (optional)
-
-    referenceToRas = slicer.vtkMRMLLinearTransformNode()
-    referenceToRas.SetName('referenceToRas')
-    slicer.mrmlScene.AddNode(referenceToRas)
-
-    # Experiment parameters (start from here if you have alphaToBeta already)
-
-    N = 10  # Number of fiducials
-    Scale = 100.0  # Size of space where fiducial are placed
-    Sigma = 2.0  # Radius of random error
-
-    # Create first fiducial list
-
+  def distance(self,N,referenceToRas):
     import numpy
+
+    Scale = 100.0  # Size of space where fiducial are placed
+    Sigma = 2.0
 
     fromNormCoordinates = numpy.random.rand(N, 3)  # An array of random numbers
     noise = numpy.random.normal(0.0, Sigma, N * 3)
@@ -334,22 +305,45 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
       pointB_Beta = numpy.append(pointB_Beta, 1)
       distance = numpy.linalg.norm(pointA_Beta - pointB_Beta)
       average = average + (distance - average) / numbersSoFar
+    return average,referenceToRasMatrix
 
-    print "Average distance after registration: " + str(average)
+  def setUp(self):
+    """ Do whatever is needed to reset the state - typically a scene clear will be enough.
+    """
+    slicer.mrmlScene.Clear(0)
 
-    createModelsLogic = slicer.modules.createmodels.logic()
-    referenceModelNode = createModelsLogic.CreateCoordinate(20, 2)
-    referenceModelNode.SetName('referenceCoordinateModel')
-    postModelNode = createModelsLogic.CreateCoordinate(20, 2)
-    postModelNode.SetName('RasCoordinateModel')
+  def runTest(self):
+    """Run as few or as many tests as needed here.
+    """
+    self.setUp()
+    self.test_HannahWilkinson1()
 
-    referenceModelNode.GetDisplayNode().SetColor(1, 0, 0)
-    postModelNode.GetDisplayNode().SetColor(0, 1, 0)
+  def test_HannahWilkinson1(self):
+    import numpy
+    # Create transform node for registration result (optional)
 
-    postModelNode.SetAndObserveTransformNodeID(referenceToRas.GetID())
+    referenceToRas = slicer.vtkMRMLLinearTransformNode()
+    referenceToRas.SetName('referenceToRas')
+    slicer.mrmlScene.AddNode(referenceToRas)
 
-    targetPoint_Reference = numpy.array([0, 0, 0, 1])
-    targetPoint_Ras = referenceToRasMatrix.MultiplyFloatPoint(targetPoint_Reference)
-    distance = numpy.linalg.norm(targetPoint_Reference - targetPoint_Ras)
-    print 'Target Registration Error' + str(distance)
+    # Experiment parameters (start from here if you have alphaToBeta already)
+    for N in range(0,20):  # Number of fiducials
+      average,referenceToRasMatrix=self.distance(N,referenceToRas)
+
+      createModelsLogic = slicer.modules.createmodels.logic()
+      referenceModelNode = createModelsLogic.CreateCoordinate(20, 2)
+      referenceModelNode.SetName('referenceCoordinateModel')
+      postModelNode = createModelsLogic.CreateCoordinate(20, 2)
+      postModelNode.SetName('RasCoordinateModel')
+
+      referenceModelNode.GetDisplayNode().SetColor(1, 0, 0)
+      postModelNode.GetDisplayNode().SetColor(0, 1, 0)
+
+      postModelNode.SetAndObserveTransformNodeID(referenceToRas.GetID())
+
+      targetPoint_Reference = numpy.array([0, 0, 0, 1])
+      targetPoint_Ras = referenceToRasMatrix.MultiplyFloatPoint(targetPoint_Reference)
+      distance = numpy.linalg.norm(targetPoint_Reference - targetPoint_Ras)
+      print "Average distance after registration: " + str(average)
+      print 'Target Registration Error: ' + str(distance)
 
