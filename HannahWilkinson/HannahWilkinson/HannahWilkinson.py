@@ -340,13 +340,13 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
 
     TREdata = slicer.mrmlScene.AddNode(slicer.vtkMRMLDoubleArrayNode())
     TREarray = TREdata.GetArray()
-    TREarray.SetNumberOfTuples(10)
-    for i in range(2,10):
+    TREarray.SetNumberOfTuples(9)
+    for i in range(1,10):
       TREarray.SetComponent(i, 0, i*10)
 
 
     # Experiment parameters (start from here if you have alphaToBeta already)
-    for N in range(2,10):  # Number of fiducials
+    for N in range(1,10):  # Number of fiducials
       average,referenceToRasMatrix=self.distance(N,referenceToRas)
 
       createModelsLogic = slicer.modules.createmodels.logic()
