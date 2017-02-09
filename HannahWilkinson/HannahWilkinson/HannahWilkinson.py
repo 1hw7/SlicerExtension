@@ -237,7 +237,7 @@ class HannahWilkinsonLogic(ScriptedLoadableModuleLogic):
 class HannahWilkinsonTest(ScriptedLoadableModuleTest):
   def distance(self,N,referenceToRas):
     import numpy
-
+    N=N*10
     Scale = 100.0  # Size of space where fiducial are placed
     Sigma = 2.0
 
@@ -320,14 +320,33 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
 
   def test_HannahWilkinson1(self):
     import numpy
-    # Create transform node for registration result (optional)
+    import slicer
+    import math
+
+    # Switch to a layout (24) that contains a Chart View to initiate the construction of the widget and Chart View Node
+    lns = slicer.mrmlScene.GetNodesByClass('vtkMRMLLayoutNode')
+    lns.InitTraversal()
+    ln = lns.GetNextItemAsObject()
+    ln.SetViewArrangement(24)
+
+    # Get the Chart View Node
+    cvns = slicer.mrmlScene.GetNodesByClass('vtkMRMLChartViewNode')
+    cvns.InitTraversal()
+    cvn = cvns.GetNextItemAsObject()
 
     referenceToRas = slicer.vtkMRMLLinearTransformNode()
     referenceToRas.SetName('referenceToRas')
     slicer.mrmlScene.AddNode(referenceToRas)
 
+    TREdata = slicer.mrmlScene.AddNode(slicer.vtkMRMLDoubleArrayNode())
+    TREarray = TREdata.GetArray()
+    TREarray.SetNumberOfTuples(10)
+    for i in range(2,10):
+      TREarray.SetComponent(i, 0, i*10)
+
+
     # Experiment parameters (start from here if you have alphaToBeta already)
-    for N in range(0,20):  # Number of fiducials
+    for N in range(2,10):  # Number of fiducials
       average,referenceToRasMatrix=self.distance(N,referenceToRas)
 
       createModelsLogic = slicer.modules.createmodels.logic()
@@ -346,4 +365,20 @@ class HannahWilkinsonTest(ScriptedLoadableModuleTest):
       distance = numpy.linalg.norm(targetPoint_Reference - targetPoint_Ras)
       print "Average distance after registration: " + str(average)
       print 'Target Registration Error: ' + str(distance)
+      TREarray.SetComponent(N, 1, distance)
+
+    #plotting TRE as function of num points
+    # Create a Chart Node.
+    cn = slicer.mrmlScene.AddNode(slicer.vtkMRMLChartNode())
+    # Add the Array Nodes to the Chart. The first argument is a string used for the legend and to refer to the Array when setting properties.
+    cn.AddArray('A double array', TREdata.GetID())
+    # Set a few properties on the Chart. The first argument is a string identifying which Array to assign the property.
+    # 'default' is used to assign a property to the Chart itself (as opposed to an Array Node).
+    cn.SetProperty('default', 'title', 'TRE as a function of number of points')
+    cn.SetProperty('default', 'xAxisLabel', 'Number of points')
+    cn.SetProperty('default', 'yAxisLabel', 'TRE')
+
+    # Tell the Chart View which Chart to display
+    cvn.SetChartNodeID(cn.GetID())
+
 
